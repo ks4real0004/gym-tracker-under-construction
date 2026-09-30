@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PULSE Gym Tracker & Workout Planner</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gym: {
+                            base: '#0B0F17',
+                            card: '#151C28',
+                            cardHover: '#1C2638',
+                            accent: '#10B981', // Emerald green
+                            accentHover: '#059669',
+                            accentGlow: 'rgba(16, 185, 129, 0.25)',
+                            secondary: '#6366F1', // Indigo
+                            darkBorder: '#263348',
+                            lightText: '#F3F4F6',
+                            mutedText: '#9CA3AF'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0B0F17;
+            color: #F3F4F6;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B0F17;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #263348;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10B981;
+        }
+        .glow-accent {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+        }
+        .glass-panel {
+            background: rgba(21, 28, 40, 0.85);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-gym-base antialiased pb-16">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-30 border-b border-gym-darkBorder glass-panel px-4 py-3 sm:px-6">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg glow-accent">
+                    <i data-lucide="dumbbell" class="w-6 h-6 stroke-[2.5]"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-xl tracking-tight text-white flex items-center gap-2">
+                        PULSE <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest">Tracker</span>
+                    </h1>
+                    <p class="text-xs text-gym-mutedText hidden sm:block">Custom Gym Splits & Exercise Planner</p>
+                </div>
+            </div>
+
+            <!-- Global Action Toolbar -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="openGymMode()" class="px-3 py-2 sm:px-4 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs sm:text-sm hover:bg-emerald-400 transition-all flex items-center gap-2 shadow-lg glow-accent">
+                    <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                    <span>Gym Mode</span>
+                </button>
+                <div class="h-6 w-[1px] bg-gym-darkBorder mx-1 hidden sm:block"></div>
+                <button onclick="openBackupModal()" class="p-2 sm:px-3 sm:py-2 rounded-xl bg-gym-card border border-gym-darkBorder hover:border-emerald-500/50 text-gym-mutedText hover:text-white transition-all text-xs sm:text-sm flex items-center gap-2" title="Backup & Restore Data">
+                    <i data-lucide="database" class="w-4 h-4"></i>
+                    <span class="hidden md:inline">Backup</span>
+                </button>
+                <button onclick="confirmResetAll()" class="p-2 sm:px-3 sm:py-2 rounded-xl bg-gym-card border border-gym-darkBorder hover:border-red-500/50 text-gym-mutedText hover:text-red-400 transition-all text-xs sm:text-sm flex items-center gap-2" title="Reset Demo Data">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    <span class="hidden md:inline">Reset All</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-6 sm:px-6 space-y-6">
+        
+        <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-gym-mutedText uppercase tracking-wider flex items-center gap-2">
+                <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
+                <span>Workout Splits</span>
+            </h2>
+            <button onclick="openAddDayModal()" class="text-xs font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 px-3 py-1.5 rounded-xl transition-all shadow-lg glow-accent flex items-center gap-1">
+                <i data-lucide="plus" class="w-4 h-4"></i> Add Day
+            </button>
+        </div>
+
+        <!-- Accordion Container for Days -->
+        <div id="daysAccordionContainer" class="space-y-4">
+            <!-- Dynamically injected days -->
+        </div>
+
+    </main>
+
+    <!-- MODAL: Add/Edit Exercise -->
+    <div id="exerciseModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden">
+        <div class="bg-gym-card border border-gym-darkBorder rounded-2xl w-full max-w-lg p-6 space-y-5 shadow-2xl relative">
+            <div class="flex justify-between items-center border-b border-gym-darkBorder pb-3">
+                <h3 id="exerciseModalTitle" class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="dumbbell" class="w-5 h-5 text-emerald-400"></i>
+                    <span>Add New Exercise</span>
+                </h3>
+                <button onclick="closeExerciseModal()" class="text-gym-mutedText hover:text-white p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="exerciseForm" onsubmit="handleExerciseSubmit(event)" class="space-y-4">
+                <input type="hidden" id="exerciseId">
+                
+                <div>
+                    <label class="block text-xs font-semibold text-gym-mutedText uppercase mb-1">Exercise Name *</label>
+                    <input type="text" id="exName" required placeholder="e.g. Incline Dumbbell Press" class="w-full bg-gym-base border border-gym-darkBorder rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors">
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gym-mutedText uppercase mb-1">Sets *</label>
+                        <input type="text" id="exSets" required placeholder="e.g. 4" class="w-full bg-gym-base border border-gym-darkBorder rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gym-mutedText uppercase mb-1">Reps/Time *</label>
+                        <input type="text" id="exReps" required placeholder="e.g. 8-12" class="w-full bg-gym-base border border-gym-darkBorder rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gym-mutedText uppercase mb-1">Target Weight</label>
+                        <input type="text" id="exWeight" placeholder="e.g. 70 lbs" class="w-full bg-gym-base border border-gym-darkBorder rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gym-mutedText uppercase mb-1 flex items-center gap-1.5">
+                        <i data-lucide="youtube" class="w-3.5 h-3.5 text-red-500"></i> YouTube Tutorial Link
+                    </label>
+                    <input type="url" id="exYtUrl" placeholder="https://www.youtube.com/watch?v=..." class="w-full bg-gym-base border border-gym-darkBorder rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+                    <p class="text-[11px] text-gym-mutedText mt-1">Accepts standard YouTube URLs or Shorts for video embedding</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gym-mutedText uppercase mb-1 flex items-center gap-1.5">
+                        <i data-lucide="image" class="w-3.5 h-3.5 text-indigo-400"></i> Reference Image URL
+                    </label>
+                    <input type="url" id="exImageUrl" placeholder="https://images.unsplash.com/..." class="w-full bg-gym-base border border-gym-darkBorder rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gym-mutedText uppercase mb-1">Notes / Form Cues</label>
+                    <textarea id="exNotes" rows="2" placeholder="e.g. Focus on chest stretch at bottom, explosive drive up." class="w-full bg-gym-base border border-gym-darkBorder rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 resize-none"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeExerciseModal()" class="px-4 py-2.5 rounded-xl border border-gym-darkBorder text-gym-mutedText hover:text-white text-sm font-semibold transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-bold transition-all shadow-lg glow-accent">
+                        Save Exercise
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Add/Edit Day -->
+    <div id="dayModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden">
+        <div class="bg-gym-card border border-gym-darkBorder rounded-2xl w-full max-w-md p-6 space-y-5 shadow-2xl relative">
+            <div class="flex justify-between items-center border-b border-gym-darkBorder pb-3">
+                <h3 id="dayModalTitle" class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="calendar-plus" class="w-5 h-5 text-emerald-400"></i>
+                    <span>Workout Day</span>
+                </h3>
+                <button onclick="closeDayModal()" class="text-gym-mutedText hover:text-white p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="dayForm" onsubmit="handleDaySubmit(event)" class="space-y-4">
+                <input type="hidden" id="dayId">
+
+                <div>
+                    <label class="block text-xs font-semibold text-gym-mutedText uppercase mb-1">Day Name / Label *</label>
+                    <input type="text" id="dayNameInput" required placeholder="e.g. Monday - Push Day" class="w-full bg-gym-base border border-gym-darkBorder rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gym-mutedText uppercase mb-1">Focus Muscle Groups *</label>
+                    <input type="text" id="dayFocusInput" required placeholder="e.g. Chest, Shoulders, Triceps" class="w-full bg-gym-base border border-gym-darkBorder rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeDayModal()" class="px-4 py-2.5 rounded-xl border border-gym-darkBorder text-gym-mutedText hover:text-white text-sm font-semibold">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-bold shadow-lg glow-accent">
+                        Save Day
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: YouTube Player Video Overlay -->
+    <div id="ytModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md hidden">
+        <div class="bg-gym-card border border-gym-darkBorder rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl relative flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-gym-darkBorder bg-gym-card">
+                <h4 id="ytModalTitle" class="text-base font-bold text-white flex items-center gap-2 truncate">
+                    <i data-lucide="youtube" class="w-5 h-5 text-red-500"></i>
+                    <span>Technique Tutorial</span>
+                </h4>
+                <button onclick="closeYtModal()" class="text-gym-mutedText hover:text-white p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="relative aspect-video w-full bg-black">
+                <iframe id="ytIframe" class="w-full h-full" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Image Lightbox -->
+    <div id="imageModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md hidden" onclick="closeImageModal()">
+        <div class="relative max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl border border-gym-darkBorder" onclick="event.stopPropagation()">
+            <button onclick="closeImageModal()" class="absolute top-3 right-3 bg-black/70 text-white rounded-full p-2 hover:bg-black transition-colors z-10">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <img id="modalImageTarget" src="" alt="Exercise Technique Form" class="w-full h-auto max-h-[80vh] object-contain">
+        </div>
+    </div>
+
+    <!-- MODAL: Fullscreen Interactive Gym Mode -->
+    <div id="gymModeModal" class="fixed inset-0 z-50 bg-gym-base flex flex-col hidden overflow-y-auto">
+        <!-- Gym Mode Header -->
+        <header class="p-4 border-b border-gym-darkBorder bg-gym-card flex items-center justify-between sticky top-0 z-10">
+            <div class="flex items-center gap-3">
+                <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+                <div>
+                    <h2 id="gymModeDayTitle" class="font-extrabold text-lg text-white">GYM MODE</h2>
+                    <p id="gymModeProgress" class="text-xs text-emerald-400 font-semibold">0/0 Done</p>
+                </div>
+            </div>
+
+            <!-- Rest Timer Widget -->
+            <div class="flex items-center gap-3 bg-gym-base px-4 py-2 rounded-xl border border-gym-darkBorder">
+                <i data-lucide="timer" class="w-5 h-5 text-emerald-400"></i>
+                <div class="text-right">
+                    <div id="timerDisplay" class="font-mono text-lg font-bold text-white">00:00</div>
+                    <div class="text-[10px] text-gym-mutedText uppercase tracking-wider">Rest Timer</div>
+                </div>
+                <div class="flex items-center gap-1 ml-2">
+                    <button onclick="startTimer(30)" class="px-2 py-1 text-xs rounded bg-gym-cardHover hover:bg-slate-700 text-gym-mutedText hover:text-white border border-gym-darkBorder">+30s</button>
+                    <button onclick="startTimer(60)" class="px-2 py-1 text-xs rounded bg-gym-cardHover hover:bg-slate-700 text-gym-mutedText hover:text-white border border-gym-darkBorder">+60s</button>
+                    <button onclick="resetTimer()" class="p-1 text-xs rounded bg-gym-cardHover text-red-400 border border-gym-darkBorder">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="closeGymMode()" class="px-3.5 py-2 bg-gym-cardHover border border-gym-darkBorder text-white rounded-xl text-xs font-bold hover:bg-slate-700">
+                Exit Gym Mode
+            </button>
+        </header>
+
+        <!-- Gym Mode Exercises Checklist Container -->
+        <div class="p-4 sm:p-6 max-w-3xl mx-auto w-full flex-1 space-y-4">
+            <div id="gymModeExercises" class="space-y-4">
+                <!-- Dynamically generated big checklist items -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Backup / Export / Import -->
+    <div id="backupModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden">
+        <div class="bg-gym-card border border-gym-darkBorder rounded-2xl w-full max-w-lg p-6 space-y-5 shadow-2xl relative">
+            <div class="flex justify-between items-center border-b border-gym-darkBorder pb-3">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="database" class="w-5 h-5 text-emerald-400"></i>
+                    <span>Backup & Restore Data</span>
+                </h3>
+                <button onclick="closeBackupModal()" class="text-gym-mutedText hover:text-white p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gym-mutedText uppercase mb-1">Export Workout Data (JSON)</label>
+                    <div class="flex gap-2">
+                        <button onclick="copyBackupToClipboard()" class="flex-1 py-2.5 rounded-xl bg-gym-cardHover border border-gym-darkBorder text-white text-xs font-bold hover:bg-slate-700 flex items-center justify-center gap-2">
+                            <i data-lucide="copy" class="w-4 h-4 text-emerald-400"></i> Copy Data JSON
+                        </button>
+                        <button onclick="downloadBackupFile()" class="flex-1 py-2.5 rounded-xl bg-gym-cardHover border border-gym-darkBorder text-white text-xs font-bold hover:bg-slate-700 flex items-center justify-center gap-2">
+                            <i data-lucide="download" class="w-4 h-4 text-emerald-400"></i> Download JSON File
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border-t border-gym-darkBorder pt-4">
+                    <label class="block text-xs font-semibold text-gym-mutedText uppercase mb-1">Import Workout Data</label>
+                    <textarea id="importJsonText" rows="4" placeholder="Paste exported JSON data here..." class="w-full bg-gym-base border border-gym-darkBorder rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-emerald-500 resize-none"></textarea>
+                    <button onclick="handleImportJson()" class="mt-2 w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all shadow-lg glow-accent">
+                        Import Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Custom Confirm Dialog -->
+    <div id="confirmModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden">
+        <div class="bg-gym-card border border-gym-darkBorder rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-2xl relative text-center">
+            <div class="w-12 h-12 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center mx-auto border border-red-500/20">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <h4 id="confirmTitle" class="text-lg font-bold text-white">Are you sure?</h4>
+            <p id="confirmMessage" class="text-xs text-gym-mutedText">This action cannot be undone.</p>
+            <div class="flex items-center justify-center gap-3 pt-2">
+                <button onclick="closeConfirmModal()" class="flex-1 py-2 rounded-xl border border-gym-darkBorder text-gym-mutedText hover:text-white text-xs font-semibold">
+                    Cancel
+                </button>
+                <button id="confirmExecuteBtn" class="flex-1 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-xs shadow-lg">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        // Default Starter Gym Split Demo Data
+        const DEFAULT_DATA = {
+            activeDayId: 'day_push',
+            days: [
+                {
+                    id: 'day_push',
+                    name: 'Monday - Push Day',
+                    focus: 'Chest, Shoulders & Triceps',
+                    exercises: [
+                        {
+                            id: 'ex_1',
+                            name: 'Barbell Bench Press',
+                            sets: '4',
+                            reps: '8-10',
+                            weight: '185 lbs',
+                            ytUrl: 'https://www.youtube.com/watch?v=rT7DgCr-3pg',
+                            imageUrl: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=600&auto=format&fit=crop&q=80',
+                            notes: 'Retract scapula, keep feet flat on ground, touch lower sternum.',
+                            completed: false
+                        },
+                        {
+                            id: 'ex_2',
+                            name: 'Overhead Shoulder Press',
+                            sets: '3',
+                            reps: '8-12',
+                            weight: '115 lbs',
+                            ytUrl: 'https://www.youtube.com/watch?v=2yjwXTZQDDI',
+                            imageUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=600&auto=format&fit=crop&q=80',
+                            notes: 'Squeeze glutes and core to prevent hyper-extending back.',
+                            completed: false
+                        },
+                        {
+                            id: 'ex_3',
+                            name: 'Incline Dumbbell Press',
+                            sets: '3',
+                            reps: '10-12',
+                            weight: '65 lbs',
+                            ytUrl: 'https://www.youtube.com/watch?v=8iPEnn-ltC8',
+                            imageUrl: '',
+                            notes: 'Bench set at 30 degrees incline. Controlled 2-sec eccentric.',
+                            completed: false
+                        },
+                        {
+                            id: 'ex_4',
+                            name: 'Tricep Rope Pushdowns',
+                            sets: '4',
+                            reps: '12-15',
+                            weight: '50 lbs',
+                            ytUrl: 'https://www.youtube.com/watch?v=vB5OHsJ3EME',
+                            imageUrl: '',
+                            notes: 'Keep elbows locked at sides, spread rope at bottom.',
+                            completed: false
+                        }
+                    ]
+                },
+                {
+                    id: 'day_pull',
+                    name: 'Tuesday - Pull Day',
+                    focus: 'Back, Rear Delts & Biceps',
+                    exercises: [
+                        {
+                            id: 'ex_5',
+                            name: 'Barbell Bent-Over Row',
+                            sets: '4',
+                            reps: '8-10',
+                            weight: '155 lbs',
+                            ytUrl: 'https://www.youtube.com/watch?v=FWJR5Ve8bnQ',
+                            imageUrl: 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?w=600&auto=format&fit=crop&q=80',
+                            notes: 'Hinge at hips, pull towards belly button.',
+                            completed: false
+                        },
+                        {
+                            id: 'ex_6',
+                            name: 'Lat Pulldown (Wide Grip)',
+                            sets: '3',
+                            reps: '10-12',
+                            weight: '130 lbs',
+                            ytUrl: 'https://www.youtube.com/watch?v=CAwf7n6Luuc',
+                            imageUrl: '',
+                            notes: 'Drive elbows down to hips, squeeze lats.',
+                            completed: false
+                        },
+                        {
+                            id: 'ex_7',
+                            name: 'Barbell Bicep Curls',
+                            sets: '3',
+                            reps: '10-12',
+                            weight: '70 lbs',
+                            ytUrl: 'https://www.youtube.com/watch?v=kwG2ipFRgfo',
+                            imageUrl: '',
+                            notes: 'No swinging momentum. Strict tension on bicep apex.',
+                            completed: false
+                        }
+                    ]
+                },
+                {
+                    id: 'day_legs',
+                    name: 'Wednesday - Legs & Core',
+                    focus: 'Quadriceps, Hamstrings, Calves & Abs',
+                    exercises: [
+                        {
+                            id: 'ex_8',
+                            name: 'Barbell Back Squats',
+                            sets: '4',
+                            reps: '6-8',
+                            weight: '225 lbs',
+                            ytUrl: 'https://www.youtube.com/watch?v=ultWZbUMPL8',
+                            imageUrl: 'https://images.unsplash.com/photo-1566241142559-40e1dab266c6?w=600&auto=format&fit=crop&q=80',
+                            notes: 'Squat below parallel, keep knees tracking in line with toes.',
+                            completed: false
+                        },
+                        {
+                            id: 'ex_9',
+                            name: 'Romanian Deadlifts (RDL)',
+                            sets: '3',
+                            reps: '10-12',
+                            weight: '185 lbs',
+                            ytUrl: 'https://www.youtube.com/watch?v=JCXUYuzwA68',
+                            imageUrl: '',
+                            notes: 'Feel stretch in hamstrings, keep bar close to shins.',
+                            completed: false
+                        }
+                    ]
+                }
+            ]
+        };
+
+        // Application State
+        let appState = {
+            activeDayId: '',
+            days: []
+        };
+
+        // LocalStorage Loader / Saver
+        function loadData() {
+            try {
+                const stored = localStorage.getItem('pulse_gym_tracker_data_v1');
+                if (stored) {
+                    appState = JSON.parse(stored);
+                } else {
+                    appState = JSON.parse(JSON.stringify(DEFAULT_DATA));
+                    saveData();
+                }
+            } catch (e) {
+                console.error('Error loading state:', e);
+                appState = JSON.parse(JSON.stringify(DEFAULT_DATA));
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('pulse_gym_tracker_data_v1', JSON.stringify(appState));
+        }
+
+        // Helper: Extract YouTube ID from various URL formats
+        function extractYouTubeId(url) {
+            if (!url) return null;
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        // Helper: Generate YouTube Thumbnail URL
+        function getYouTubeThumbnail(url) {
+            const ytId = extractYouTubeId(url);
+            return ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : null;
+        }
+
+        // Main Render Controller
+        function renderApp() {
+            renderDaysAccordion();
+            lucide.createIcons();
+        }
+
+        function toggleDayAccordion(dayId) {
+            if (appState.activeDayId === dayId) {
+                appState.activeDayId = null; // collapse if clicking already open
+            } else {
+                appState.activeDayId = dayId; // expand
+            }
+            saveData();
+            renderApp();
+        }
+
+        // Render Accordion Days
+        function renderDaysAccordion() {
+            const container = document.getElementById('daysAccordionContainer');
+            container.innerHTML = '';
+
+            if (appState.days.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 bg-gym-card border border-gym-darkBorder rounded-2xl p-6 shadow-lg">
+                        <i data-lucide="dumbbell" class="w-12 h-12 text-gym-darkBorder mx-auto mb-3"></i>
+                        <p class="text-gym-mutedText text-sm font-medium">Your gym split is currently empty.</p>
+                        <button onclick="openAddDayModal()" class="mt-4 px-4 py-2 bg-emerald-500 text-slate-950 font-bold text-xs rounded-xl shadow glow-accent">Create First Day</button>
+                    </div>`;
+                return;
+            }
+
+            appState.days.forEach(day => {
+                const isExpanded = day.id === appState.activeDayId;
+                const total = day.exercises.length;
+                const completed = day.exercises.filter(e => e.completed).length;
+                const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+                
+                const dayCard = document.createElement('div');
+                dayCard.className = `bg-gym-card border ${isExpanded ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/5' : 'border-gym-darkBorder'} rounded-2xl overflow-hidden transition-all duration-300`;
+
+                // Accordion Header
+                let html = `
+                    <div class="w-full p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:bg-gym-cardHover transition-colors ${isExpanded ? 'bg-gym-cardHover' : ''}" onclick="toggleDayAccordion('${day.id}')">
+                        <div class="flex-1 space-y-1.5 w-full">
+                            <div class="flex items-center justify-between sm:justify-start gap-3">
+                                <h3 class="font-bold text-lg text-white">${escapeHtml(day.name)}</h3>
+                                <div class="flex items-center gap-1 sm:hidden">
+                                     <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-5 h-5 text-gym-mutedText"></i>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs font-medium text-gym-mutedText flex-wrap">
+                                <span class="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">${escapeHtml(day.focus || 'General')}</span>
+                                <span>•</span>
+                                <span>${completed}/${total} Done</span>
+                            </div>
+                            <!-- Progress Bar -->
+                            <div class="w-full max-w-sm bg-slate-800 rounded-full h-1.5 overflow-hidden mt-2">
+                                <div class="bg-gradient-to-r from-emerald-500 to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-none border-gym-darkBorder">
+                            <div class="flex items-center gap-1">
+                                <button onclick="event.stopPropagation(); appState.activeDayId = '${day.id}'; openEditDayModal();" class="p-2 text-gym-mutedText hover:text-emerald-400 transition-colors rounded-lg bg-gym-base border border-gym-darkBorder shadow-sm" title="Edit Day">
+                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="event.stopPropagation(); appState.activeDayId = '${day.id}'; confirmDeleteCurrentDay();" class="p-2 text-gym-mutedText hover:text-red-400 transition-colors rounded-lg bg-gym-base border border-gym-darkBorder shadow-sm" title="Delete Day">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button onclick="event.stopPropagation(); appState.activeDayId = '${day.id}'; resetCurrentDayProgress();" class="text-xs px-3 py-2 rounded-lg border border-gym-darkBorder text-gym-mutedText hover:text-amber-400 hover:border-amber-400/50 transition-all flex items-center gap-1 bg-gym-base shadow-sm">
+                                    <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Reset
+                                </button>
+                                <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-5 h-5 text-gym-mutedText hidden sm:block"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Accordion Content (Workouts Checklist)
+                if (isExpanded) {
+                    html += `<div class="p-4 sm:p-5 border-t border-gym-darkBorder bg-gym-base/30 space-y-4" onclick="event.stopPropagation()">`;
+                    
+                    if (total === 0) {
+                        html += `
+                            <div class="text-center py-6 text-gym-mutedText text-sm bg-gym-card rounded-xl border border-gym-darkBorder">
+                                No exercises added yet.
+                            </div>
+                        `;
+                    } else {
+                        html += `<div class="space-y-3">`;
+                        day.exercises.forEach(ex => {
+                            const ytThumbnail = getYouTubeThumbnail(ex.ytUrl);
+                            html += `
+                                <div class="group bg-gym-card border rounded-xl p-3 sm:p-4 transition-all duration-200 shadow-sm ${ex.completed ? 'border-emerald-500/30 bg-gym-card/60 opacity-80' : 'border-gym-darkBorder hover:border-slate-600'}">
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <!-- Checkbox + Info -->
+                                        <div class="flex items-start gap-3 flex-1">
+                                            <button onclick="appState.activeDayId = '${day.id}'; toggleExercise('${ex.id}')" class="mt-0.5 shrink-0 w-7 h-7 rounded-lg border flex items-center justify-center transition-all shadow-sm ${ex.completed ? 'bg-emerald-500 border-emerald-500 text-slate-950 glow-accent' : 'border-gym-darkBorder bg-gym-base hover:border-emerald-500/50'}">
+                                                <i data-lucide="check" class="w-4 h-4 stroke-[3] ${ex.completed ? 'block' : 'hidden'}"></i>
+                                            </button>
+                                            <div class="space-y-1.5">
+                                                <h4 class="font-bold text-sm sm:text-base text-white ${ex.completed ? 'line-through text-gym-mutedText' : ''}">${escapeHtml(ex.name)}</h4>
+                                                <div class="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs">
+                                                    <span class="px-2 py-0.5 rounded-md bg-gym-base border border-gym-darkBorder text-gym-mutedText shadow-sm">${escapeHtml(ex.sets)} Sets</span>
+                                                    <span class="px-2 py-0.5 rounded-md bg-gym-base border border-gym-darkBorder text-gym-mutedText shadow-sm">${escapeHtml(ex.reps)} Reps</span>
+                                                    ${ex.weight ? `<span class="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-sm">${escapeHtml(ex.weight)}</span>` : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Media & Actions -->
+                                        <div class="flex items-center gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-gym-darkBorder/50 w-full sm:w-auto justify-between sm:justify-end">
+                                            <div class="flex gap-2">
+                                                ${ytThumbnail ? `
+                                                    <button onclick="openYtModal('${escapeHtml(ex.ytUrl)}', '${escapeHtml(ex.name)}')" class="relative w-14 h-9 rounded-md overflow-hidden border border-gym-darkBorder hover:border-red-500 shadow-sm transition-colors" title="Watch Video">
+                                                        <img src="${ytThumbnail}" class="w-full h-full object-cover">
+                                                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center hover:bg-black/20 transition-colors">
+                                                            <i data-lucide="play" class="w-3.5 h-3.5 text-white fill-current"></i>
+                                                        </div>
+                                                    </button>
+                                                ` : ''}
+                                                ${ex.imageUrl ? `
+                                                    <button onclick="openImageModal('${escapeHtml(ex.imageUrl)}')" class="relative w-14 h-9 rounded-md overflow-hidden border border-gym-darkBorder hover:border-indigo-500 shadow-sm transition-colors" title="View Image">
+                                                        <img src="${escapeHtml(ex.imageUrl)}" onerror="this.onerror=null; this.src='https://placehold.co/100x60/151C28/FFFFFF?text=Img';" class="w-full h-full object-cover">
+                                                        <div class="absolute inset-0 bg-black/30 flex items-center justify-center hover:bg-transparent transition-colors">
+                                                            <i data-lucide="image" class="w-3.5 h-3.5 text-white drop-shadow"></i>
+                                                        </div>
+                                                    </button>
+                                                ` : ''}
+                                            </div>
+                                            <div class="flex gap-1">
+                                                <button onclick="appState.activeDayId = '${day.id}'; openEditExerciseModal('${ex.id}')" class="p-2 text-gym-mutedText hover:text-white rounded bg-gym-base border border-gym-darkBorder transition-colors shadow-sm" title="Edit"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                                                <button onclick="appState.activeDayId = '${day.id}'; confirmDeleteExercise('${ex.id}')" class="p-2 text-gym-mutedText hover:text-red-400 rounded bg-gym-base border border-gym-darkBorder transition-colors shadow-sm" title="Delete"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ${ex.notes ? `<p class="mt-2 text-[11px] text-gym-mutedText pl-10 italic border-l-2 border-gym-darkBorder ml-1">"${escapeHtml(ex.notes)}"</p>` : ''}
+                                </div>
+                            `;
+                        });
+                        html += `</div>`;
+                    }
+
+                    // Add Exercise Button for this day
+                    html += `
+                        <button onclick="appState.activeDayId = '${day.id}'; openAddExerciseModal()" class="w-full py-3.5 mt-2 rounded-xl border border-dashed border-emerald-500/30 bg-emerald-500/5 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/50 transition-all text-sm font-semibold flex items-center justify-center gap-2">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> Add Exercise to ${escapeHtml(day.name)}
+                        </button>
+                    `;
+                    
+                    html += `</div>`;
+                }
+
+                dayCard.innerHTML = html;
+                container.appendChild(dayCard);
+            });
+        }
+
+        // Day Handlers
+        function openAddDayModal() {
+            document.getElementById('dayModalTitle').innerText = 'Add Workout Day';
+            document.getElementById('dayId').value = '';
+            document.getElementById('dayNameInput').value = '';
+            document.getElementById('dayFocusInput').value = '';
+            document.getElementById('dayModal').classList.remove('hidden');
+        }
+
+        function openEditDayModal() {
+            const activeDay = appState.days.find(d => d.id === appState.activeDayId);
+            if (!activeDay) return;
+
+            document.getElementById('dayModalTitle').innerText = 'Edit Workout Day';
+            document.getElementById('dayId').value = activeDay.id;
+            document.getElementById('dayNameInput').value = activeDay.name;
+            document.getElementById('dayFocusInput').value = activeDay.focus || '';
+            document.getElementById('dayModal').classList.remove('hidden');
+        }
+
+        function closeDayModal() {
+            document.getElementById('dayModal').classList.add('hidden');
+        }
+
+        function handleDaySubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('dayId').value;
+            const name = document.getElementById('dayNameInput').value.trim();
+            const focus = document.getElementById('dayFocusInput').value.trim();
+
+            if (!name) return;
+
+            if (id) {
+                // Edit existing
+                const day = appState.days.find(d => d.id === id);
+                if (day) {
+                    day.name = name;
+                    day.focus = focus;
+                }
+            } else {
+                // Create new
+                const newDay = {
+                    id: 'day_' + Date.now(),
+                    name: name,
+                    focus: focus,
+                    exercises: []
+                };
+                appState.days.push(newDay);
+                appState.activeDayId = newDay.id;
+            }
+
+            saveData();
+            closeDayModal();
+            renderApp();
+            showToast(id ? 'Day updated successfully!' : 'New day added!');
+        }
+
+        function confirmDeleteCurrentDay() {
+            const activeDay = appState.days.find(d => d.id === appState.activeDayId);
+            if (!activeDay) return;
+
+            openConfirmModal(
+                'Delete Workout Day',
+                `Are you sure you want to delete "${activeDay.name}" and all its exercises?`,
+                () => {
+                    appState.days = appState.days.filter(d => d.id !== activeDay.id);
+                    if (appState.days.length > 0) {
+                        appState.activeDayId = appState.days[0].id;
+                    } else {
+                        appState.activeDayId = '';
+                    }
+                    saveData();
+                    renderApp();
+                    showToast('Day deleted');
+                }
+            );
+        }
+
+        // Exercise Handlers
+        function openAddExerciseModal() {
+            const activeDay = appState.days.find(d => d.id === appState.activeDayId);
+            if (!activeDay) {
+                showToast('Please create or select a workout day first!', 'error');
+                return;
+            }
+
+            document.getElementById('exerciseModalTitle').innerText = 'Add New Exercise';
+            document.getElementById('exerciseForm').reset();
+            document.getElementById('exerciseId').value = '';
+            document.getElementById('exerciseModal').classList.remove('hidden');
+        }
+
+        function openEditExerciseModal(exId) {
+            const activeDay = appState.days.find(d => d.id === appState.activeDayId);
+            if (!activeDay) return;
+
+            const ex = activeDay.exercises.find(e => e.id === exId);
+            if (!ex) return;
+
+            document.getElementById('exerciseModalTitle').innerText = 'Edit Exercise';
+            document.getElementById('exerciseId').value = ex.id;
+            document.getElementById('exName').value = ex.name || '';
+            document.getElementById('exSets').value = ex.sets || '';
+            document.getElementById('exReps').value = ex.reps || '';
+            document.getElementById('exWeight').value = ex.weight || '';
+            document.getElementById('exYtUrl').value = ex.ytUrl || '';
+            document.getElementById('exImageUrl').value = ex.imageUrl || '';
+            document.getElementById('exNotes').value = ex.notes || '';
+
+            document.getElementById('exerciseModal').classList.remove('hidden');
+        }
+
+        function closeExerciseModal() {
+            document.getElementById('exerciseModal').classList.add('hidden');
+        }
+
+        function handleExerciseSubmit(e) {
+            e.preventDefault();
+            const activeDay = appState.days.find(d => d.id === appState.activeDayId);
+            if (!activeDay) return;
+
+            const exId = document.getElementById('exerciseId').value;
+            const exData = {
+                id: exId || ('ex_' + Date.now()),
+                name: document.getElementById('exName').value.trim(),
+                sets: document.getElementById('exSets').value.trim(),
+                reps: document.getElementById('exReps').value.trim(),
+                weight: document.getElementById('exWeight').value.trim(),
+                ytUrl: document.getElementById('exYtUrl').value.trim(),
+                imageUrl: document.getElementById('exImageUrl').value.trim(),
+                notes: document.getElementById('exNotes').value.trim(),
+                completed: false
+            };
+
+            if (exId) {
+                // Update existing
+                const index = activeDay.exercises.findIndex(e => e.id === exId);
+                if (index !== -1) {
+                    exData.completed = activeDay.exercises[index].completed; // preserve completed state
+                    activeDay.exercises[index] = exData;
+                }
+            } else {
+                // Push new
+                activeDay.exercises.push(exData);
+            }
+
+            saveData();
+            closeExerciseModal();
+            renderApp();
+            showToast(exId ? 'Exercise updated' : 'Exercise added');
+        }
+
+        function toggleExercise(exId) {
+            const activeDay = appState.days.find(d => d.id === appState.activeDayId);
+            if (!activeDay) return;
+
+            const ex = activeDay.exercises.find(e => e.id === exId);
+            if (ex) {
+                ex.completed = !ex.completed;
+                saveData();
+                renderApp();
+
+                if (document.getElementById('gymModeModal').classList.contains('hidden') === false) {
+                    renderGymMode();
+                }
+            }
+        }
+
+        function confirmDeleteExercise(exId) {
+            openConfirmModal(
+                'Delete Exercise',
+                'Are you sure you want to remove this exercise from today\'s split?',
+                () => {
+                    const activeDay = appState.days.find(d => d.id === appState.activeDayId);
+                    if (activeDay) {
+                        activeDay.exercises = activeDay.exercises.filter(e => e.id !== exId);
+                        saveData();
+                        renderApp();
+                        showToast('Exercise removed');
+                    }
+                }
+            );
+        }
+
+        function resetCurrentDayProgress() {
+            const activeDay = appState.days.find(d => d.id === appState.activeDayId);
+            if (!activeDay) return;
+
+            activeDay.exercises.forEach(e => e.completed = false);
+            saveData();
+            renderApp();
+            if (!document.getElementById('gymModeModal').classList.contains('hidden')) {
+                renderGymMode();
+            }
+            showToast('Today\'s checks reset!');
+        }
+
+        // YouTube & Image Lightbox Modals
+        function openYtModal(url, title) {
+            const ytId = extractYouTubeId(url);
+            if (!ytId) {
+                showToast('Invalid YouTube Link', 'error');
+                return;
+            }
+            document.getElementById('ytModalTitle').innerText = title || 'Technique Tutorial';
+            document.getElementById('ytIframe').src = `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1`;
+            document.getElementById('ytModal').classList.remove('hidden');
+        }
+
+        function closeYtModal() {
+            document.getElementById('ytIframe').src = '';
+            document.getElementById('ytModal').classList.add('hidden');
+        }
+
+        function openImageModal(url) {
+            if (!url) return;
+            document.getElementById('modalImageTarget').src = url;
+            document.getElementById('imageModal').classList.remove('hidden');
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').classList.add('hidden');
+        }
+
+        // Fullscreen Gym Interactive Mode Logic
+        function openGymMode() {
+            const activeDay = appState.days.find(d => d.id === appState.activeDayId);
+            if (!activeDay) {
+                showToast('Please select a valid workout day first', 'error');
+                return;
+            }
+            renderGymMode();
+            document.getElementById('gymModeModal').classList.remove('hidden');
+        }
+
+        function closeGymMode() {
+            document.getElementById('gymModeModal').classList.add('hidden');
+        }
+
+        function renderGymMode() {
+            const activeDay = appState.days.find(d => d.id === appState.activeDayId);
+            if (!activeDay) return;
+
+            document.getElementById('gymModeDayTitle').innerText = activeDay.name;
+            const completed = activeDay.exercises.filter(e => e.completed).length;
+            const total = activeDay.exercises.length;
+            document.getElementById('gymModeProgress').innerText = `${completed}/${total} Completed (${total > 0 ? Math.round((completed/total)*100) : 0}%)`;
+
+            const container = document.getElementById('gymModeExercises');
+            container.innerHTML = '';
+
+            if (total === 0) {
+                container.innerHTML = `<p class="text-center text-gym-mutedText py-12">No exercises configured for this day.</p>`;
+                return;
+            }
+
+            activeDay.exercises.forEach(ex => {
+                const ytThumbnail = getYouTubeThumbnail(ex.ytUrl);
+                const item = document.createElement('div');
+                item.className = `p-5 rounded-2xl border transition-all ${
+                    ex.completed 
+                    ? 'bg-gym-card/40 border-emerald-500/20 opacity-70' 
+                    : 'bg-gym-card border-gym-darkBorder'
+                }`;
+
+                item.innerHTML = `
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-4 flex-1">
+                            <button onclick="toggleExercise('${ex.id}')" class="w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${
+                                ex.completed 
+                                ? 'bg-emerald-500 border-emerald-500 text-slate-950 glow-accent' 
+                                : 'border-gym-darkBorder bg-gym-base hover:border-emerald-500/50'
+                            }">
+                                <i data-lucide="check" class="w-5 h-5 stroke-[3] ${ex.completed ? 'block' : 'hidden'}"></i>
+                            </button>
+                            
+                            <div>
+                                <h3 class="font-bold text-lg text-white ${ex.completed ? 'line-through text-gym-mutedText' : ''}">${escapeHtml(ex.name)}</h3>
+                                <div class="text-sm text-emerald-400 font-medium">
+                                    ${ex.sets} sets × ${ex.reps} reps ${ex.weight ? `@ ${ex.weight}` : ''}
+                                </div>
+                            </div>
+                        </div>
+
+                        ${ytThumbnail ? `
+                            <button onclick="openYtModal('${escapeHtml(ex.ytUrl)}', '${escapeHtml(ex.name)}')" class="px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold flex items-center gap-1.5 hover:bg-red-500/20">
+                                <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i> Video
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+
+                container.appendChild(item);
+            });
+
+            lucide.createIcons();
+        }
+
+        // Audio Synth Rest Timer
+        let timerInterval = null;
+        let timerTimeLeft = 0;
+
+        function startTimer(seconds) {
+            timerTimeLeft += seconds;
+            updateTimerDisplay();
+
+            if (!timerInterval) {
+                timerInterval = setInterval(() => {
+                    timerTimeLeft--;
+                    if (timerTimeLeft <= 0) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                        timerTimeLeft = 0;
+                        playTimerBeep();
+                        showToast('Rest timer finished! Time for next set 💪');
+                    }
+                    updateTimerDisplay();
+                }, 1000);
+            }
+        }
+
+        function resetTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            timerTimeLeft = 0;
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(timerTimeLeft / 60);
+            const secs = timerTimeLeft % 60;
+            document.getElementById('timerDisplay').innerText = 
+                `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        // Web Audio API Beep Generator (No external MP3 required)
+        function playTimerBeep() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime); // A5 note
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start();
+                osc.stop(ctx.currentTime + 0.8);
+            } catch (e) {
+                console.log('Audio error:', e);
+            }
+        }
+
+        // Backup & Restore
+        function openBackupModal() {
+            document.getElementById('importJsonText').value = '';
+            document.getElementById('backupModal').classList.remove('hidden');
+        }
+
+        function closeBackupModal() {
+            document.getElementById('backupModal').classList.add('hidden');
+        }
+
+        function copyBackupToClipboard() {
+            const jsonStr = JSON.stringify(appState, null, 2);
+            navigator.clipboard.writeText(jsonStr).then(() => {
+                showToast('Workout data copied to clipboard!');
+            }).catch(() => {
+                showToast('Failed to copy', 'error');
+            });
+        }
+
+        function downloadBackupFile() {
+            const jsonStr = JSON.stringify(appState, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pulse_gym_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Backup file downloaded');
+        }
+
+        function handleImportJson() {
+            const raw = document.getElementById('importJsonText').value.trim();
+            if (!raw) return;
+
+            try {
+                const parsed = JSON.parse(raw);
+                if (parsed && Array.isArray(parsed.days)) {
+                    appState = parsed;
+                    saveData();
+                    renderApp();
+                    closeBackupModal();
+                    showToast('Data imported successfully!');
+                } else {
+                    showToast('Invalid data structure in JSON', 'error');
+                }
+            } catch (err) {
+                showToast('Invalid JSON syntax', 'error');
+            }
+        }
+
+        function confirmResetAll() {
+            openConfirmModal(
+                'Reset All Data',
+                'This will restore the starter demo workout split and clear all custom progress. Continue?',
+                () => {
+                    appState = JSON.parse(JSON.stringify(DEFAULT_DATA));
+                    saveData();
+                    renderApp();
+                    showToast('Restored default demo split!');
+                }
+            );
+        }
+
+        // Custom Confirmation Dialog Helper
+        let pendingConfirmAction = null;
+
+        function openConfirmModal(title, message, onConfirm) {
+            document.getElementById('confirmTitle').innerText = title;
+            document.getElementById('confirmMessage').innerText = message;
+            pendingConfirmAction = onConfirm;
+
+            document.getElementById('confirmExecuteBtn').onclick = () => {
+                if (pendingConfirmAction) pendingConfirmAction();
+                closeConfirmModal();
+            };
+
+            document.getElementById('confirmModal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').classList.add('hidden');
+            pendingConfirmAction = null;
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-3 rounded-xl text-xs font-bold text-white shadow-xl flex items-center gap-2 border pointer-events-auto transform transition-all duration-300 translate-y-2 opacity-0 ${
+                type === 'error' 
+                ? 'bg-red-600/90 border-red-500' 
+                : 'bg-gym-card border-emerald-500/40 text-emerald-400'
+            }`;
+
+            toast.innerHTML = `
+                <i data-lucide="${type === 'error' ? 'alert-circle' : 'check-circle-2'}" class="w-4 h-4"></i>
+                <span>${escapeHtml(message)}</span>
+            `;
+
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Helper: HTML Escaper
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // App Initialization
+        window.onload = function() {
+            loadData();
+            renderApp();
+        };
+    </script>
+</body>
+</html>
